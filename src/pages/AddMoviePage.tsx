@@ -1,14 +1,14 @@
 
 import Header from '@/components/Header';
-import Hero from '@/components/Hero';
+import AddMovie from '@/components/AddMovie';
 
-const Index = () => {
+const AddMoviePage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      <Hero />
+      <AddMovie />
     </div>
   );
 };
 
-export default Index;
+export default AddMoviePage;
