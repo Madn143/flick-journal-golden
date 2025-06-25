@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,7 @@ import AddMoviePage from "./pages/AddMoviePage";
 import RecommendationsPage from "./pages/RecommendationsPage";
 import MovieDetailPage from "./pages/MovieDetailPage";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -22,15 +22,54 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/auth/signup" element={<SignUp />} />
           <Route path="/auth/signin" element={<SignIn />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/add-movie" element={<AddMoviePage />} />
-          <Route path="/recommendations" element={<RecommendationsPage />} />
-          <Route path="/my-movies" element={<DashboardPage />} />
-          <Route path="/movie/:id" element={<MovieDetailPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/add-movie"
+            element={
+              <ProtectedRoute>
+                <AddMoviePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recommendations"
+            element={
+              <ProtectedRoute>
+                <RecommendationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-movies"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/movie/:id"
+            element={
+              <ProtectedRoute>
+                <MovieDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch-all Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
