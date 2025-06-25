@@ -94,7 +94,7 @@ const AddMovie = () => {
     setIsSearching(true);
     
     try {
-      const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=8f5a6b4c`);
+      const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=e38636d9`);
       const data = await response.json();
       
       if (data.Response === 'True') {
@@ -122,7 +122,7 @@ const AddMovie = () => {
     setIsLoadingDetails(true);
     
     try {
-      const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=8f5a6b4c`);
+      const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=e38636d9`);
       const data = await response.json();
       
       if (data.Response === 'True') {
