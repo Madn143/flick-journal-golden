@@ -1,20 +1,11 @@
 
 import { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { Film, Menu, X, User, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Film, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  
-  const isActive = (path: string) => location.pathname === path;
-  
-  const navigation = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Add Movie', path: '/add-movie' },
-    { name: 'My Movies', path: '/my-movies' },
-  ];
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-white/10">
@@ -28,33 +19,18 @@ const Header = () => {
             <span className="text-xl font-bold hero-text">My Movie Journal</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  isActive(item.path)
-                    ? 'text-primary bg-primary/10'
-                    : 'text-gray-300 hover:text-primary hover:bg-white/5'
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-
-          {/* User Menu */}
+          {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-primary">
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </Button>
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-red-400">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <Link to="/auth/signin">
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-primary">
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/auth/signup">
+              <Button size="sm" className="gold-gradient text-black font-semibold hover:scale-105 transition-all duration-200">
+                Sign Up
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -70,34 +46,24 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Auth Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 glass-card mt-2 mb-4">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'text-primary bg-primary/10'
-                      : 'text-gray-300 hover:text-primary hover:bg-white/5'
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <div className="border-t border-white/10 pt-3 mt-3">
-                <Button variant="ghost" size="sm" className="w-full justify-start text-gray-300 hover:text-primary">
-                  <User className="h-4 w-4 mr-2" />
-                  Profile
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start text-gray-300 hover:text-red-400">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </div>
+              <Link
+                to="/auth/signin"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-primary hover:bg-white/5 transition-all duration-200"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/auth/signup"
+                className="block px-3 py-2 rounded-md text-base font-medium text-primary bg-primary/10 transition-all duration-200"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign Up
+              </Link>
             </div>
           </div>
         )}
