@@ -9,6 +9,7 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import DashboardPage from "./pages/DashboardPage";
 import AddMoviePage from "./pages/AddMoviePage";
+import RecommendationsPage from "./pages/RecommendationsPage";
 import MovieDetailPage from "./pages/MovieDetailPage";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/auth/signin" element={<SignIn />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/add-movie" element={<AddMoviePage />} />
+          <Route path="/recommendations" element={<RecommendationsPage />} />
           <Route path="/my-movies" element={<DashboardPage />} />
           <Route path="/movie/:id" element={<MovieDetailPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

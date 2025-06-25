@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,68 +8,98 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star, Search, Plus, Film } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MovieSearchResult {
-  id: string;
-  title: string;
-  year: string;
-  poster: string;
-  plot: string;
-  genre: string;
-  runtime: string;
+  Title: string;
+  Year: string;
+  imdbID: string;
+  Type: string;
+  Poster: string;
+}
+
+interface MovieDetails {
+  Title: string;
+  Year: string;
+  Runtime: string;
+  Genre: string;
+  Plot: string;
+  Poster: string;
+  imdbID: string;
 }
 
 const AddMovie = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MovieSearchResult[]>([]);
-  const [selectedMovie, setSelectedMovie] = useState<MovieSearchResult | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<MovieDetails | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [formData, setFormData] = useState({
     rating: 0,
     review: '',
     isFavorite: false
   });
 
-  // Mock search function - In real app, this would use TMDB or OMDb API
-  const searchMovies = async (query: string) => {
-    if (!query.trim()) return;
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const searchMovies = async () => {
+    if (!searchQuery.trim()) return;
     
     setIsSearching(true);
+    setSearchResults([]);
     
-    // Mock API response
-    setTimeout(() => {
-      const mockResults: MovieSearchResult[] = [
-        {
-          id: '1',
-          title: 'The Godfather',
-          year: '1972',
-          poster: '/placeholder.svg',
-          plot: 'The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.',
-          genre: 'Crime, Drama',
-          runtime: '175 min'
-        },
-        {
-          id: '2',
-          title: 'The Godfather Part II',
-          year: '1974',
-          poster: '/placeholder.svg',
-          plot: 'The early life and career of Vito Corleone in 1920s New York City is portrayed, while his son, Michael, expands and tightens his grip on the family crime syndicate.',
-          genre: 'Crime, Drama',
-          runtime: '202 min'
-        }
-      ].filter(movie => 
-        movie.title.toLowerCase().includes(query.toLowerCase())
-      );
+    try {
+      const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(searchQuery)}&apikey=8f5a6b4c`);
+      const data = await response.json();
       
-      setSearchResults(mockResults);
+      if (data.Response === 'True') {
+        setSearchResults(data.Search || []);
+      } else {
+        setSearchResults([]);
+        toast({
+          title: "No movies found",
+          description: "Try a different search term",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error searching movies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to search movies. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSearching(false);
-    }, 1000);
+    }
   };
 
-  const selectMovie = (movie: MovieSearchResult) => {
-    setSelectedMovie(movie);
-    setSearchResults([]);
-    setSearchQuery('');
+  const getMovieDetails = async (imdbID: string) => {
+    setIsLoadingDetails(true);
+    
+    try {
+      const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=8f5a6b4c`);
+      const data = await response.json();
+      
+      if (data.Response === 'True') {
+        setSelectedMovie(data);
+        setSearchResults([]);
+        setSearchQuery('');
+      }
+    } catch (error) {
+      console.error('Error fetching movie details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch movie details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   const renderStars = (rating: number, interactive = false) => {
@@ -85,20 +116,45 @@ const AddMovie = () => {
     ));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMovie) return;
+    if (!selectedMovie || !user) return;
     
-    console.log('Adding movie:', {
-      movie: selectedMovie,
-      userRating: formData.rating,
-      userReview: formData.review,
-      isFavorite: formData.isFavorite
-    });
-    
-    // Reset form
-    setSelectedMovie(null);
-    setFormData({ rating: 0, review: '', isFavorite: false });
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .insert({
+          user_id: user.id,
+          title: selectedMovie.Title,
+          year: parseInt(selectedMovie.Year),
+          poster: selectedMovie.Poster !== 'N/A' ? selectedMovie.Poster : null,
+          plot: selectedMovie.Plot !== 'N/A' ? selectedMovie.Plot : null,
+          genre: selectedMovie.Genre !== 'N/A' ? selectedMovie.Genre : null,
+          runtime: selectedMovie.Runtime !== 'N/A' ? parseInt(selectedMovie.Runtime) : null,
+          rating: formData.rating,
+          review: formData.review,
+          is_favorite: formData.isFavorite
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Movie added to your journal successfully.",
+      });
+
+      // Reset form
+      setSelectedMovie(null);
+      setFormData({ rating: 0, review: '', isFavorite: false });
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error adding movie:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add movie",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -123,11 +179,11 @@ const AddMovie = () => {
                 placeholder="Type a movie title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchMovies(searchQuery)}
+                onKeyPress={(e) => e.key === 'Enter' && searchMovies()}
                 className="bg-black/50 border-white/20 text-white placeholder:text-gray-500"
               />
               <Button 
-                onClick={() => searchMovies(searchQuery)}
+                onClick={searchMovies}
                 disabled={isSearching}
                 className="gold-gradient text-black font-semibold"
               >
@@ -140,31 +196,29 @@ const AddMovie = () => {
               <div className="mt-4 space-y-2">
                 {searchResults.map((movie) => (
                   <div
-                    key={movie.id}
-                    onClick={() => selectMovie(movie)}
+                    key={movie.imdbID}
+                    onClick={() => getMovieDetails(movie.imdbID)}
                     className="p-3 glass border border-white/10 rounded-lg cursor-pointer hover:border-primary/30 transition-all duration-200"
                   >
                     <div className="flex items-center space-x-3">
                       <img
-                        src={movie.poster}
-                        alt={movie.title}
+                        src={movie.Poster !== 'N/A' ? movie.Poster : '/placeholder.svg'}
+                        alt={movie.Title}
                         className="w-12 h-16 object-cover rounded"
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-white">{movie.title} ({movie.year})</h3>
-                        <p className="text-sm text-gray-400 line-clamp-2">{movie.plot}</p>
-                        <div className="flex gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs border-white/20 text-gray-300">
-                            {movie.genre}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs border-white/20 text-gray-300">
-                            {movie.runtime}
-                          </Badge>
-                        </div>
+                        <h3 className="font-semibold text-white">{movie.Title} ({movie.Year})</h3>
+                        <p className="text-sm text-gray-400">{movie.Type}</p>
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {isLoadingDetails && (
+              <div className="mt-4 text-center text-gray-400">
+                Loading movie details...
               </div>
             )}
           </CardContent>
@@ -183,21 +237,21 @@ const AddMovie = () => {
               {/* Movie Preview */}
               <div className="flex flex-col md:flex-row gap-6 mb-6 p-4 glass border border-white/10 rounded-lg">
                 <img
-                  src={selectedMovie.poster}
-                  alt={selectedMovie.title}
+                  src={selectedMovie.Poster !== 'N/A' ? selectedMovie.Poster : '/placeholder.svg'}
+                  alt={selectedMovie.Title}
                   className="w-32 h-48 object-cover rounded-lg mx-auto md:mx-0"
                 />
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold text-white mb-2">
-                    {selectedMovie.title} ({selectedMovie.year})
+                    {selectedMovie.Title} ({selectedMovie.Year})
                   </h3>
-                  <p className="text-gray-400 mb-4">{selectedMovie.plot}</p>
+                  <p className="text-gray-400 mb-4">{selectedMovie.Plot}</p>
                   <div className="flex gap-2">
                     <Badge className="gold-gradient text-black font-semibold">
-                      {selectedMovie.genre}
+                      {selectedMovie.Genre}
                     </Badge>
                     <Badge variant="outline" className="border-white/20 text-gray-300">
-                      {selectedMovie.runtime}
+                      {selectedMovie.Runtime}
                     </Badge>
                   </div>
                 </div>

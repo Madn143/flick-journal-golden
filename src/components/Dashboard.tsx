@@ -1,77 +1,28 @@
 
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MovieCard from './MovieCard';
+import { useMovies } from '@/hooks/useMovies';
 import { Plus, Film, Star, TrendingUp, Clock } from 'lucide-react';
 
 const Dashboard = () => {
-  // Mock data - In real app, this would come from Supabase
-  const [favoriteMovies] = useState([
-    {
-      id: '1',
-      title: 'The Godfather',
-      poster: '/placeholder.svg',
-      rating: 5,
-      review: 'An absolute masterpiece of cinema. The storytelling, acting, and cinematography are unparalleled.',
-      year: 1972,
-      runtime: 175,
-      genre: 'Crime',
-      isFavorite: true
-    },
-    {
-      id: '2',
-      title: 'Pulp Fiction',
-      poster: '/placeholder.svg',
-      rating: 5,
-      review: 'Tarantino\'s non-linear narrative creates a unique and engaging experience.',
-      year: 1994,
-      runtime: 154,
-      genre: 'Crime',
-      isFavorite: true
-    }
-  ]);
+  const { movies, favoriteMovies, loading } = useMovies();
 
-  const [watchedMovies] = useState([
-    {
-      id: '3',
-      title: 'Inception',
-      poster: '/placeholder.svg',
-      rating: 4,
-      review: 'Mind-bending and visually stunning. A complex plot that rewards multiple viewings.',
-      year: 2010,
-      runtime: 148,
-      genre: 'Sci-Fi'
-    },
-    {
-      id: '4',
-      title: 'The Dark Knight',
-      poster: '/placeholder.svg',
-      rating: 5,
-      review: 'Heath Ledger\'s Joker performance is legendary. Perfect superhero film.',
-      year: 2008,
-      runtime: 152,
-      genre: 'Action'
-    },
-    {
-      id: '5',
-      title: 'Interstellar',
-      poster: '/placeholder.svg',
-      rating: 4,
-      review: 'Emotional and scientifically fascinating. Nolan at his best.',
-      year: 2014,
-      runtime: 169,
-      genre: 'Sci-Fi'
-    }
-  ]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="text-white">Loading your movies...</div>
+      </div>
+    );
+  }
 
   const stats = {
-    totalMovies: favoriteMovies.length + watchedMovies.length,
-    averageRating: 4.6,
-    totalHours: Math.floor((favoriteMovies.reduce((acc, movie) => acc + (movie.runtime || 0), 0) + 
-                            watchedMovies.reduce((acc, movie) => acc + (movie.runtime || 0), 0)) / 60),
+    totalMovies: movies.length,
+    averageRating: movies.length > 0 ? 
+      (movies.reduce((acc, movie) => acc + (movie.rating || 0), 0) / movies.length).toFixed(1) : 0,
+    totalHours: Math.floor(movies.reduce((acc, movie) => acc + (movie.runtime || 0), 0) / 60),
     favoriteCount: favoriteMovies.length
   };
 
@@ -156,7 +107,18 @@ const Dashboard = () => {
             {favoriteMovies.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {favoriteMovies.map((movie) => (
-                  <MovieCard key={movie.id} {...movie} />
+                  <MovieCard 
+                    key={movie.id} 
+                    id={movie.id}
+                    title={movie.title}
+                    poster={movie.poster || '/placeholder.svg'}
+                    rating={movie.rating || 0}
+                    review={movie.review || ''}
+                    year={movie.year || 0}
+                    runtime={movie.runtime || undefined}
+                    genre={movie.genre || undefined}
+                    isFavorite={movie.is_favorite || false}
+                  />
                 ))}
               </div>
             ) : (
@@ -187,11 +149,36 @@ const Dashboard = () => {
               </CardHeader>
             </Card>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {watchedMovies.map((movie) => (
-                <MovieCard key={movie.id} {...movie} />
-              ))}
-            </div>
+            {movies.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {movies.map((movie) => (
+                  <MovieCard 
+                    key={movie.id} 
+                    id={movie.id}
+                    title={movie.title}
+                    poster={movie.poster || '/placeholder.svg'}
+                    rating={movie.rating || 0}
+                    review={movie.review || ''}
+                    year={movie.year || 0}
+                    runtime={movie.runtime || undefined}
+                    genre={movie.genre || undefined}
+                    isFavorite={movie.is_favorite || false}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="glass-card border-white/20">
+                <CardContent className="p-8 text-center">
+                  <Film className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-4">No movies added yet.</p>
+                  <Link to="/add-movie">
+                    <Button className="gold-gradient text-black font-semibold">
+                      Add Your First Movie
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
