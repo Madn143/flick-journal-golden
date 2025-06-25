@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 
+const OMDB_API_KEY = "e38636d9";
+
 interface MovieSearchResult {
   Title: string;
   Year: string;
@@ -94,7 +96,7 @@ const AddMovie = () => {
     setIsSearching(true);
     
     try {
-      const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=e38636d9`);
+      const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`);
       const data = await response.json();
       
       if (data.Response === 'True') {
@@ -122,7 +124,7 @@ const AddMovie = () => {
     setIsLoadingDetails(true);
     
     try {
-      const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=e38636d9`);
+      const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${OMDB_API_KEY}`);
       const data = await response.json();
       
       if (data.Response === 'True') {
