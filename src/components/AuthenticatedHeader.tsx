@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Film, Menu, X, LogOut, Plus, Home, Star, User } from 'lucide-react';
+import { Film, Menu, X, LogOut, Plus, Home, Star, User, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -28,7 +29,7 @@ const AuthenticatedHeader = () => {
           title: "Signed out successfully",
           description: "You have been signed out of your account.",
         });
-        navigate('/');
+        navigate('/auth/signin');
       } else {
         throw new Error('Sign out failed');
       }
@@ -112,12 +113,17 @@ const AuthenticatedHeader = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/20" />
-                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5" asChild>
+                  <Link to="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5">
-                  <span>Settings</span>
+                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5" asChild>
+                  <Link to="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/20" />
                 <DropdownMenuItem 
@@ -184,6 +190,22 @@ const AuthenticatedHeader = () => {
               >
                 <Star className="h-4 w-4 mr-2" />
                 Recommendations
+              </Link>
+              <Link
+                to="/profile"
+                className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-primary hover:bg-white/5 transition-all duration-200"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </Link>
+              <Link
+                to="/settings"
+                className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-primary hover:bg-white/5 transition-all duration-200"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
               </Link>
               <button
                 onClick={() => {

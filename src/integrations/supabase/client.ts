@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -7,12 +8,12 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    persistSession: true,        // Keep user logged in after page refresh
-    autoRefreshToken: true,      // Auto-refresh session when token expires
-    detectSessionInUrl: true,    // Handle OAuth callbacks
-    flowType: 'pkce',           // Use PKCE flow for better security
-    storage: window.localStorage, // Use localStorage for session persistence
-    storageKey: 'supabase.auth.token', // Custom storage key
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token',
   },
   global: {
     headers: {

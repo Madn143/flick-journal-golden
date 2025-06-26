@@ -11,7 +11,7 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session
+    // Get initial session - this handles OAuth callbacks
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -20,6 +20,7 @@ export const useAuth = () => {
         } else if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
+          console.log('Initial session loaded:', session?.user?.email);
         }
       } catch (error) {
         console.error('Error in getInitialSession:', error);
@@ -29,8 +30,6 @@ export const useAuth = () => {
         }
       }
     };
-
-    getInitialSession();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -46,15 +45,21 @@ export const useAuth = () => {
         // Handle specific auth events
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', session?.user?.email);
+          // Clear any existing URL parameters after successful sign in
+          if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
-          // Clear any local storage or cached data if needed
           localStorage.removeItem('supabase.auth.token');
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed for user:', session?.user?.email);
         }
       }
     );
+
+    // Initialize session first, then set up listener
+    getInitialSession();
 
     return () => {
       mounted = false;
