@@ -27,28 +27,25 @@ const MovieDetail = () => {
   const [movie, setMovie] = useState<MovieDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Mock data fetch - In real app, this would fetch from Supabase
-    setTimeout(() => {
-      const mockMovie: MovieDetailData = {
-        id: id || '1',
-        title: 'The Godfather',
-        poster: '/placeholder.svg',
-        plot: 'The aging patriarch of an organized crime dynasty in postwar New York City transfers control of his clandestine empire to his reluctant youngest son, who finds himself caught between his family\'s legacy and his own moral compass.',
-        year: 1972,
-        runtime: 175,
-        genre: 'Crime, Drama',
-        director: 'Francis Ford Coppola',
-        cast: 'Marlon Brando, Al Pacino, James Caan, Robert Duvall',
-        userRating: 5,
-        userReview: 'An absolute masterpiece of cinema. The storytelling, acting, and cinematography are unparalleled. This film set the standard for what organized crime movies should be. Every scene is crafted with precision, and the performances are legendary. Marlon Brando\'s portrayal of Don Vito Corleone is iconic, and Al Pacino\'s transformation from reluctant outsider to ruthless leader is brilliantly executed.',
-        isFavorite: true,
-        dateAdded: '2024-01-15'
-      };
-      setMovie(mockMovie);
-      setIsLoading(false);
-    }, 500);
-  }, [id]);
+useEffect(() => {
+  const fetchMovie = async () => {
+    const { data, error } = await supabase
+      .from('movies')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching movie:', error);
+    } else {
+      setMovie(data as MovieDetailData);
+    }
+    setIsLoading(false);
+  };
+
+  fetchMovie();
+}, [id]);
+
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
