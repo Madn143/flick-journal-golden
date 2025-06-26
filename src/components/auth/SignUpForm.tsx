@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,10 @@ import GoogleSignInButton from './GoogleSignInButton';
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    username: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -30,14 +31,16 @@ const SignUpForm = () => {
     });
   };
 
-  const validateForm = () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Password Mismatch",
         description: "Passwords do not match. Please try again.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
 
     if (formData.password.length < 6) {
@@ -46,41 +49,22 @@ const SignUpForm = () => {
         description: "Password must be at least 6 characters long.",
         variant: "destructive",
       });
-      return false;
-    }
-
-    if (!formData.username.trim()) {
-      toast({
-        title: "Username Required",
-        description: "Please enter a username.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
     
     try {
-      // Sign up the user with email confirmation disabled
+      const redirectUrl = `${window.location.origin}/dashboard`;
+      
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             username: formData.username,
-          },
-          // Disable email confirmation for immediate sign-in
-          emailRedirectTo: undefined
+          }
         }
       });
 
@@ -88,35 +72,18 @@ const SignUpForm = () => {
         throw error;
       }
 
-      // Check if user was created successfully
       if (data.user) {
-        // If email confirmation is disabled, the user should be automatically signed in
-        if (data.session) {
+        if (data.user.email_confirmed_at) {
           toast({
-            title: "Welcome to My Movie Journal!",
-            description: "Your account has been created successfully.",
+            title: "Account Created!",
+            description: "Welcome! You have been signed up successfully.",
           });
           navigate('/dashboard');
         } else {
-          // Fallback: try to sign in immediately
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: formData.email,
-            password: formData.password,
+          toast({
+            title: "Check Your Email",
+            description: "Please check your email and click the confirmation link to complete your registration.",
           });
-
-          if (signInError) {
-            toast({
-              title: "Account Created",
-              description: "Please check your email to confirm your account, then sign in.",
-            });
-            navigate('/auth/signin');
-          } else if (signInData.user) {
-            toast({
-              title: "Welcome to My Movie Journal!",
-              description: "Your account has been created successfully.",
-            });
-            navigate('/dashboard');
-          }
         }
       }
     } catch (error: any) {
@@ -126,8 +93,8 @@ const SignUpForm = () => {
       
       if (error.message?.includes('User already registered')) {
         errorMessage = "An account with this email already exists. Please sign in instead.";
-      } else if (error.message?.includes('Password should be at least')) {
-        errorMessage = "Password should be at least 6 characters long.";
+      } else if (error.message?.includes('Password should be at least 6 characters')) {
+        errorMessage = "Password must be at least 6 characters long.";
       } else if (error.message?.includes('Invalid email')) {
         errorMessage = "Please enter a valid email address.";
       }
@@ -182,12 +149,12 @@ const SignUpForm = () => {
               <Film className="h-8 w-8 text-black" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold hero-text">Create Account</CardTitle>
+          <CardTitle className="text-2xl font-bold hero-text">Create Your Account</CardTitle>
           <CardDescription className="text-gray-400">
-            Join My Movie Journal and start tracking your cinema journey
+            Join us to start your movie journey
           </CardDescription>
         </CardHeader>
-
+        
         <CardContent className="space-y-6">
           {/* Google Sign In Button */}
           <GoogleSignInButton 
@@ -309,9 +276,8 @@ const SignUpForm = () => {
               <input
                 id="terms"
                 type="checkbox"
-                required
                 className="rounded border-white/20 bg-black/50 text-primary focus:ring-primary"
-                disabled={isLoading}
+                required
               />
               <Label htmlFor="terms" className="text-sm text-gray-400">
                 I agree to the{' '}
