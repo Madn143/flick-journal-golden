@@ -56,9 +56,6 @@ export const useAuth = () => {
           ) {
             window.history.replaceState({}, document.title, window.location.pathname);
           }
-
-          // Optional: Redirect to dashboard
-          window.location.href = '/dashboard';
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
           localStorage.removeItem('supabase.auth.token');
