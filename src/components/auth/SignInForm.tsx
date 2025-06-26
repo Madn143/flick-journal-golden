@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,11 @@ const SignInForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Get the intended destination from location state, default to dashboard
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -47,7 +51,7 @@ const SignInForm = () => {
           title: "Welcome back!",
           description: "You have been signed in successfully.",
         });
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -78,16 +82,24 @@ const SignInForm = () => {
     
     try {
       const currentUrl = window.location.origin;
+      const redirectUrl = `${currentUrl}/dashboard`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${currentUrl}/dashboard`
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
       if (error) {
         throw error;
       }
+
+      // Don't set loading to false here as the page will redirect
     } catch (error: any) {
       console.error('Google sign in error:', error);
       let errorMessage = "Failed to sign in with Google. Please try again.";

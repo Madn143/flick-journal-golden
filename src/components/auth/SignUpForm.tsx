@@ -116,16 +116,24 @@ const SignUpForm = () => {
     
     try {
       const currentUrl = window.location.origin;
+      const redirectUrl = `${currentUrl}/dashboard`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${currentUrl}/dashboard`
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
       if (error) {
         throw error;
       }
+
+      // Don't set loading to false here as the page will redirect
     } catch (error: any) {
       console.error('Google sign in error:', error);
       let errorMessage = "Failed to sign in with Google. Please try again.";
