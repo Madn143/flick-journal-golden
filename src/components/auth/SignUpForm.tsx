@@ -55,13 +55,13 @@ const SignUpForm = () => {
     setIsLoading(true);
     
     try {
-      const redirectUrl = `${window.location.origin}/dashboard`;
+      const currentUrl = window.location.origin;
       
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${currentUrl}/dashboard`,
           data: {
             username: formData.username,
           }
@@ -97,6 +97,8 @@ const SignUpForm = () => {
         errorMessage = "Password must be at least 6 characters long.";
       } else if (error.message?.includes('Invalid email')) {
         errorMessage = "Please enter a valid email address.";
+      } else if (error.message?.includes('email_provider_disabled') || error.message?.includes('Email signups are disabled')) {
+        errorMessage = "Email sign-ups are currently disabled. Please try signing in with Google or contact support.";
       }
       
       toast({
@@ -113,10 +115,11 @@ const SignUpForm = () => {
     setIsGoogleLoading(true);
     
     try {
+      const currentUrl = window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${currentUrl}/dashboard`
         }
       });
 
@@ -125,9 +128,15 @@ const SignUpForm = () => {
       }
     } catch (error: any) {
       console.error('Google sign in error:', error);
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      
+      if (error.message?.includes('provider is not enabled')) {
+        errorMessage = "Google sign-in is not configured. Please contact support.";
+      }
+      
       toast({
         title: "Google Sign In Failed",
-        description: error.message || "Failed to sign in with Google. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsGoogleLoading(false);

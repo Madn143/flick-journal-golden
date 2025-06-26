@@ -77,10 +77,11 @@ const SignInForm = () => {
     setIsGoogleLoading(true);
     
     try {
+      const currentUrl = window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${currentUrl}/dashboard`
         }
       });
 
@@ -89,9 +90,15 @@ const SignInForm = () => {
       }
     } catch (error: any) {
       console.error('Google sign in error:', error);
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      
+      if (error.message?.includes('provider is not enabled')) {
+        errorMessage = "Google sign-in is not configured. Please contact support or try email sign-in.";
+      }
+      
       toast({
         title: "Google Sign In Failed",
-        description: error.message || "Failed to sign in with Google. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsGoogleLoading(false);
