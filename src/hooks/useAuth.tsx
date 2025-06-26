@@ -10,13 +10,10 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session - handles OAuth callbacks
+    // Get initial session (handles OAuth redirects)
     const getInitialSession = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('Error getting session:', error);
@@ -28,13 +25,11 @@ export const useAuth = () => {
       } catch (error) {
         console.error('Error in getInitialSession:', error);
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
-    // Auth state listener
+    // Auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -45,27 +40,31 @@ export const useAuth = () => {
           setLoading(false);
         }
 
-        // Handle specific auth events
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', session?.user?.email);
 
           // Clear OAuth query params from URL
-          if (
-            window.location.search.includes('code=') ||
-            window.location.search.includes('error=')
-          ) {
+          if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
             window.history.replaceState({}, document.title, window.location.pathname);
           }
-        } else if (event === 'SIGNED_OUT') {
+
+          // Safe redirect: Only if user was on /login page
+          if (window.location.pathname === '/login') {
+            window.location.href = '/dashboard';
+          }
+        }
+
+        if (event === 'SIGNED_OUT') {
           console.log('User signed out');
           localStorage.removeItem('supabase.auth.token');
-        } else if (event === 'TOKEN_REFRESHED') {
+        }
+
+        if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed for user:', session?.user?.email);
         }
       }
     );
 
-    // Initialize
     getInitialSession();
 
     return () => {
@@ -74,7 +73,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  // Sign out
+  // Sign out function
   const signOut = async () => {
     try {
       setLoading(true);
@@ -98,7 +97,7 @@ export const useAuth = () => {
     }
   };
 
-  // Refresh session
+  // Refresh session function
   const refreshSession = async () => {
     try {
       const { data, error } = await supabase.auth.refreshSession();
