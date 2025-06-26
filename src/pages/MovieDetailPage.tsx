@@ -1,5 +1,4 @@
 
-import Header from '@/components/Header';
 import MovieDetail from '@/components/MovieDetail';
 
 const MovieDetailPage = () => {
