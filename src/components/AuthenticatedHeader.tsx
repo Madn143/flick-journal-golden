@@ -1,26 +1,37 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Film, Menu, X, LogOut, Plus, Home, Star } from 'lucide-react';
+import { Film, Menu, X, LogOut, Plus, Home, Star, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const AuthenticatedHeader = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
-      navigate('/');
+      const result = await signOut();
+      if (result.success) {
+        toast({
+          title: "Signed out successfully",
+          description: "You have been signed out of your account.",
+        });
+        navigate('/');
+      } else {
+        throw new Error('Sign out failed');
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -28,6 +39,20 @@ const AuthenticatedHeader = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const getUserInitials = () => {
+    if (user?.user_metadata?.username) {
+      return user.user_metadata.username.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getUserDisplayName = () => {
+    return user?.user_metadata?.username || user?.email || 'User';
   };
 
   return (
@@ -62,15 +87,48 @@ const AuthenticatedHeader = () => {
                 Recommendations
               </Button>
             </Link>
-            <Button
-              onClick={handleSignOut}
-              variant="ghost"
-              size="sm"
-              className="text-gray-300 hover:text-red-400"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={getUserDisplayName()} />
+                    <AvatarFallback className="bg-primary text-black font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 glass-card border-white/20" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none text-white">
+                      {getUserDisplayName()}
+                    </p>
+                    <p className="text-xs leading-none text-gray-400">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/20" />
+                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-white/5">
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/20" />
+                <DropdownMenuItem 
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile menu button */}
@@ -90,6 +148,19 @@ const AuthenticatedHeader = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 glass-card mt-2 mb-4">
+              <div className="flex items-center px-3 py-2 mb-2">
+                <Avatar className="h-8 w-8 mr-3">
+                  <AvatarImage src={user?.user_metadata?.avatar_url} alt={getUserDisplayName()} />
+                  <AvatarFallback className="bg-primary text-black font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-white">{getUserDisplayName()}</p>
+                  <p className="text-xs text-gray-400">{user?.email}</p>
+                </div>
+              </div>
+              
               <Link
                 to="/dashboard"
                 className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-primary hover:bg-white/5 transition-all duration-200"
@@ -119,7 +190,7 @@ const AuthenticatedHeader = () => {
                   handleSignOut();
                   setIsMobileMenuOpen(false);
                 }}
-                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-red-400 hover:bg-white/5 transition-all duration-200"
+                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

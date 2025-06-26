@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Film, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Film, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import GoogleSignInButton from './GoogleSignInButton';
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const SignUpForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -28,56 +30,111 @@ const SignUpForm = () => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
+  const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
+        title: "Password Mismatch",
+        description: "Passwords do not match. Please try again.",
         variant: "destructive",
       });
-      setIsLoading(false);
-      return;
+      return false;
     }
 
     if (formData.password.length < 6) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
         variant: "destructive",
       });
-      setIsLoading(false);
+      return false;
+    }
+
+    if (!formData.username.trim()) {
+      toast({
+        title: "Username Required",
+        description: "Please enter a username.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
 
+    setIsLoading(true);
+    
     try {
+      // Sign up the user with email confirmation disabled
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             username: formData.username,
-          }
-          // ✅ No emailRedirectTo now
+          },
+          // Disable email confirmation for immediate sign-in
+          emailRedirectTo: undefined
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      toast({
-        title: "Account created!",
-        description: "You can now sign in with your credentials.",
-      });
+      // Check if user was created successfully
+      if (data.user) {
+        // If email confirmation is disabled, the user should be automatically signed in
+        if (data.session) {
+          toast({
+            title: "Welcome to My Movie Journal!",
+            description: "Your account has been created successfully.",
+          });
+          navigate('/dashboard');
+        } else {
+          // Fallback: try to sign in immediately
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password,
+          });
 
-      navigate('/auth/signin');
-
+          if (signInError) {
+            toast({
+              title: "Account Created",
+              description: "Please check your email to confirm your account, then sign in.",
+            });
+            navigate('/auth/signin');
+          } else if (signInData.user) {
+            toast({
+              title: "Welcome to My Movie Journal!",
+              description: "Your account has been created successfully.",
+            });
+            navigate('/dashboard');
+          }
+        }
+      }
     } catch (error: any) {
       console.error('Sign up error:', error);
+      
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      if (error.message?.includes('User already registered')) {
+        errorMessage = "An account with this email already exists. Please sign in instead.";
+      } else if (error.message?.includes('Password should be at least')) {
+        errorMessage = "Password should be at least 6 characters long.";
+      } else if (error.message?.includes('Invalid email')) {
+        errorMessage = "Please enter a valid email address.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to create account.",
+        title: "Sign Up Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -85,8 +142,39 @@ const SignUpForm = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      toast({
+        title: "Google Sign In Failed",
+        description: error.message || "Failed to sign in with Google. Please try again.",
+        variant: "destructive",
+      });
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black"></div>
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+      </div>
+      
       <Card className="w-full max-w-md glass-card border-white/20 relative z-10">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -100,38 +188,167 @@ const SignUpForm = () => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Google Sign In Button */}
+          <GoogleSignInButton 
+            onClick={handleGoogleSignIn}
+            isLoading={isGoogleLoading}
+          />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-white/20" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-black/30 px-2 text-gray-400">Or continue with email</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" name="username" value={formData.username} onChange={handleChange} required />
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium text-gray-200">
+                Username
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Choose a username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="pl-10 bg-black/50 border-white/20 text-white placeholder:text-gray-500"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-200">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="pl-10 bg-black/50 border-white/20 text-white placeholder:text-gray-500"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleChange} required />
-              <Button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Hide" : "Show"}</Button>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-200">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="pl-10 pr-10 bg-black/50 border-white/20 text-white placeholder:text-gray-500"
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1 h-8 w-8 p-0 text-gray-400 hover:text-white"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleChange} required />
-              <Button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>{showConfirmPassword ? "Hide" : "Show"}</Button>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-200">
+                Confirm Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="pl-10 pr-10 bg-black/50 border-white/20 text-white placeholder:text-gray-500"
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1 h-8 w-8 p-0 text-gray-400 hover:text-white"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
 
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+            <div className="flex items-center space-x-2">
+              <input
+                id="terms"
+                type="checkbox"
+                required
+                className="rounded border-white/20 bg-black/50 text-primary focus:ring-primary"
+                disabled={isLoading}
+              />
+              <Label htmlFor="terms" className="text-sm text-gray-400">
+                I agree to the{' '}
+                <Link to="/terms" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+              </Label>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full gold-gradient text-black font-semibold hover:scale-105 transition-all duration-200"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-gray-400">
-            Already have an account? <Link to="/auth/signin" className="text-primary">Sign in here</Link>
-          </p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-400">
+              Already have an account?{' '}
+              <Link to="/auth/signin" className="text-primary hover:underline font-medium">
+                Sign in here
+              </Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
